@@ -6,9 +6,23 @@ const ViewItems = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
+  const fetchItems = () => {
     const stored = JSON.parse(localStorage.getItem("items")) || [];
     setItems(stored);
-  }, []);
+  };
+  fetchItems();
+  const handleStorageChange = (e) => {
+    if (e.key === "items") {
+      fetchItems();
+    }
+  };
+
+  window.addEventListener("storage", handleStorageChange);
+
+  return () => {
+    window.removeEventListener("storage", handleStorageChange);
+  };
+}, []);
 
   const handleItemClick = (item) => {
     setSelectedItem(item);
@@ -20,7 +34,14 @@ const ViewItems = () => {
     setSelectedItem(null);
   };
 
+  const handleDelete = (id) => {
+    const updatedItems = items.filter((item) => item.id !== id);
+    setItems(updatedItems);
+    localStorage.setItem("items", JSON.stringify(updatedItems));
+  };
+
   const handleEnquire = async () => {
+    if (!selectedItem) return;
     try {
       await fetch("https://api.emailjs.com/api/v1.0/email/send", {
         method: "POST",
@@ -55,17 +76,23 @@ const ViewItems = () => {
             {items.map((item) => (
               <div
                 key={item.id}
-                onClick={() => handleItemClick(item)}
-                className="bg-white text-black rounded-lg shadow hover:shadow-xl cursor-pointer overflow-hidden"
+                className="bg-white text-black rounded-lg shadow hover:shadow-xl overflow-hidden relative"
               >
                 <img
                   src={item.coverImageURL}
                   alt={item.itemName}
-                  className="w-full h-48 object-cover"
+                  className="w-full h-48 object-cover cursor-pointer"
+                  onClick={() => handleItemClick(item)}
                 />
                 <div className="p-4">
                   <h2 className="font-bold text-lg truncate">{item.itemName}</h2>
                   <p className="text-sm text-gray-500 capitalize">{item.itemType}</p>
+                  <button
+                    onClick={() => handleDelete(item.id)}
+                    className="mt-2 text-sm bg-red-600 hover:bg-red-700 text-white py-1 px-3 rounded"
+                  >
+                    Delete
+                  </button>
                 </div>
               </div>
             ))}
@@ -83,18 +110,18 @@ const ViewItems = () => {
               </button>
               <h2 className="text-2xl font-bold mb-4">{selectedItem.itemName}</h2>
               <p className="mb-4 text-gray-700">{selectedItem.itemDescription}</p>
-
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-                {[selectedItem.coverImageURL, ...(selectedItem.additionalImagesURLs || [])].map((img, i) => (
-                  <img
-                    key={i}
-                    src={img}
-                    alt={`img-${i}`}
-                    className="w-full h-48 object-cover rounded"
-                  />
-                ))}
+                {[selectedItem.coverImageURL, ...(selectedItem.additionalImagesURLs || [])].map(
+                  (img, i) => (
+                    <img
+                      key={i}
+                      src={img}
+                      alt={`img-${i}`}
+                      className="w-full h-48 object-cover rounded"
+                    />
+                  )
+                )}
               </div>
-
               <button
                 onClick={handleEnquire}
                 className="bg-blue-600 hover:bg-blue-700 text-white w-full py-2 rounded"

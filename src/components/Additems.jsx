@@ -11,37 +11,56 @@ const AddItem = () => {
   const coverImageRef = useRef();
   const additionalImagesRef = useRef();
 
-  const handleSubmit = (e) => {
+  const toBase64 = (file) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = error => reject(error);
+    });
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (!itemName || !itemType || !itemDescription || !coverImage) {
       alert("Please fill in all required fields.");
       return;
     }
-    const coverImageURL = URL.createObjectURL(coverImage);
-    const additionalImageURLs = additionalImages.map(file => URL.createObjectURL(file));
 
-    const newItem = {
-      id: Date.now().toString(),
-      itemName,
-      itemType,
-      itemDescription,
-      coverImage: coverImageURL,
-      additionalImages: additionalImageURLs,
-    };
-    const existingItems = JSON.parse(localStorage.getItem("items")) || [];
-    const updatedItems = [...existingItems, newItem];
-    localStorage.setItem("items", JSON.stringify(updatedItems));
+    try {
+      const coverImageBase64 = await toBase64(coverImage);
+      const additionalImagesBase64 = await Promise.all(
+        additionalImages.map(file => toBase64(file))
+      );
 
-    alert("Item successfully added!");
+      const newItem = {
+        id: Date.now().toString(),
+        itemName,
+        itemType,
+        itemDescription,
+        coverImageURL: coverImageBase64,
+        additionalImagesURLs: additionalImagesBase64,
+      };
 
-    setItemName("");
-    setItemType("");
-    setItemDescription("");
-    setCoverImage(null);
-    setAdditionalImages([]);
-    coverImageRef.current.value = "";
-    additionalImagesRef.current.value = "";
+      const existingItems = JSON.parse(localStorage.getItem("items")) || [];
+      const updatedItems = [...existingItems, newItem];
+      localStorage.setItem("items", JSON.stringify(updatedItems));
+
+      alert("Item successfully added!");
+
+      // Reset form
+      setItemName("");
+      setItemType("");
+      setItemDescription("");
+      setCoverImage(null);
+      setAdditionalImages([]);
+      coverImageRef.current.value = "";
+      additionalImagesRef.current.value = "";
+    } catch (error) {
+      console.error("Error processing images:", error);
+      alert("Error adding item. Please try again.");
+    }
   };
 
   return (
@@ -61,6 +80,7 @@ const AddItem = () => {
                 className="w-full bg-gray-100 text-black border rounded px-3 py-2"
               />
             </div>
+
             <div>
               <label className="block mb-1">Item Type *</label>
               <select
@@ -78,6 +98,7 @@ const AddItem = () => {
                 <option value="other">Other</option>
               </select>
             </div>
+
             <div>
               <label className="block mb-1">Item Description *</label>
               <textarea
@@ -88,6 +109,7 @@ const AddItem = () => {
                 className="w-full bg-gray-100 text-black border rounded px-3 py-2"
               />
             </div>
+
             <div>
               <label className="block mb-1">Cover Image *</label>
               <input
@@ -99,6 +121,7 @@ const AddItem = () => {
                 className="w-full bg-gray-100 text-black border rounded px-3 py-2"
               />
             </div>
+
             <div>
               <label className="block mb-1">Additional Images</label>
               <input
@@ -110,6 +133,7 @@ const AddItem = () => {
                 className="w-full bg-gray-100 text-black border rounded px-3 py-2"
               />
             </div>
+
             <button
               type="submit"
               className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 rounded"
